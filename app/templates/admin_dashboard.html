@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% block title %}Admin — VULMS{% endblock %}
+{% block content_header %}
+<div class="content-header">
+  <div>
+    <div class="breadcrumb"><a href="#">Home</a><span class="sep">/</span><span class="current">Administration</span></div>
+    <div class="page-title">System Administration</div>
+    <div class="page-subtitle">Manage users, courses, and queries</div>
+  </div>
+  <div class="flex-gap">
+    <button class="btn-secondary btn-sm" onclick="openModal('modalAddCourse')"><i class="fas fa-plus-circle"></i> Add Course</button>
+    <button class="btn-primary btn-sm" onclick="openModal('modalAddUser')"><i class="fas fa-user-plus"></i> Add User</button>
+  </div>
+</div>
+{% endblock %}
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-box green"><div class="stat-box-icon"><i class="fas fa-user-graduate"></i></div><div class="stat-num">{{ stats.students }}</div><div class="stat-label">Students</div></div>
+  <div class="stat-box purple"><div class="stat-box-icon"><i class="fas fa-chalkboard-teacher"></i></div><div class="stat-num">{{ stats.instructors }}</div><div class="stat-label">Instructors</div></div>
+  <div class="stat-box gold"><div class="stat-box-icon"><i class="fas fa-clock"></i></div><div class="stat-num">{{ stats.open_queries }}</div><div class="stat-label">Open Queries</div></div>
+  <div class="stat-box teal"><div class="stat-box-icon"><i class="fas fa-check-circle"></i></div><div class="stat-num">{{ stats.answered_queries }}</div><div class="stat-label">Answered</div></div>
+  <div class="stat-box blue"><div class="stat-box-icon"><i class="fas fa-book"></i></div><div class="stat-num">{{ stats.courses }}</div><div class="stat-label">Courses</div></div>
+</div>
+
+<!-- Tabs -->
+<div class="tab-nav" id="adminTabNav">
+  <button class="tab-btn active" data-tab="users"><i class="fas fa-users"></i> Users</button>
+  <button class="tab-btn" data-tab="queries"><i class="fas fa-comments"></i> Queries</button>
+  <button class="tab-btn" data-tab="courses"><i class="fas fa-book"></i> Courses</button>
+</div>
+
+<!-- USERS TAB -->
+<div class="tab-content active" id="tab-users">
+  <div class="table-toolbar">
+    <input type="text" class="search-input" placeholder="&#128269; Search by name or email..." oninput="filterTable('userTable',this.value)"/>
+    <div class="role-filter-btns filter-pills">
+      <span class="filter-pill active" onclick="filterByRole('all',this)">All</span>
+      <span class="filter-pill" onclick="filterByRole('student',this)">Students</span>
+      <span class="filter-pill" onclick="filterByRole('instructor',this)">Instructors</span>
+      <span class="filter-pill" onclick="filterByRole('admin',this)">Admins</span>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table class="vu-table" id="userTable">
+      <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th style="text-align:center">Actions</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr data-role="{{ u.role }}">
+          <td class="text-muted">{{ loop.index }}</td>
+          <td><strong>{{ u.full_name }}</strong></td>
+          <td>{{ u.email }}</td>
+          <td><span class="role-badge role-{{ u.role }}">{{ u.role|capitalize }}</span></td>
+          <td><span class="status-pill status-{{ u.status }}">{{ u.status|capitalize }}</span></td>
+          <td class="text-muted">{{ u.created_at[:10] }}</td>
+          <td class="action-btns" style="justify-content:center">
+            <button class="btn-icon btn-edit" title="Edit"
+              onclick="openEditModal({{ u.id }},'{{ u.full_name|replace("'","\\'") }}','{{ u.email }}','{{ u.role }}','{{ u.status }}',[{% for c in user_courses[u.id] %}{{ c.id }}{% if not loop.last %},{% endif %}{% endfor %}])">
+              <i class="fas fa-pen"></i> Edit
+            </button>
+            {% if u.role != 'admin' %}
+            <form method="POST" action="{{ url_for('main.toggle_user',uid=u.id) }}" style="display:inline">
+              <button type="submit" class="btn-icon {{ 'btn-warning' if u.status=='active' else 'btn-success' }}" title="{{ 'Block' if u.status=='active' else 'Unblock' }}" onclick="return confirm('{{ 'Block' if u.status=='active' else 'Unblock' }} this user?')">
+                <i class="fas fa-{{ 'ban' if u.status=='active' else 'circle-check' }}"></i> {{ 'Block' if u.status=='active' else 'Unblock' }}
+              </button>
+            </form>
+            <form method="POST" action="{{ url_for('main.delete_user',uid=u.id) }}" style="display:inline" onsubmit="return confirm('Permanently delete this user?')">
+              <button type="submit" class="btn-icon btn-danger" title="Delete"><i class="fas fa-trash"></i> Delete</button>
+            </form>
+            {% else %}
+            <span class="text-muted">Protected</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- QUERIES TAB -->
+<div class="tab-content" id="tab-queries">
+  <div class="filter-pills" style="margin-bottom:.75rem">
+    <span class="filter-pill active" data-filter="all">All</span>
+    <span class="filter-pill" data-filter="open">Open</span>
+    <span class="filter-pill" data-filter="answered">Answered</span>
+    <span class="filter-pill" data-filter="closed">Closed</span>
+  </div>
+  <div class="query-list">
+    {% for q in queries %}
+    <div class="query-item" data-status="{{ q.status }}" onclick="toggleQuery({{ q.id }},this)">
+      <div class="query-header-row">
+        <div class="query-meta">
+          <span class="query-course-tag">{{ q.code }}</span>
+          <span class="status-badge status-{{ q.status }}">{{ q.status|capitalize }}</span>
+          <span class="student-name-badge"><i class="fas fa-user"></i> {{ q.student_name }}</span>
+        </div>
+        <div class="query-actions">
+          <span class="answer-count"><i class="fas fa-reply"></i> {{ q.answer_count }}</span>
+          <span class="query-time">{{ q.created_at[:10] }}</span>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+      </div>
+      <div class="query-title">{{ q.title }}</div>
+      <div class="query-body-preview">{{ q.body[:100] }}{% if q.body|length > 100 %}...{% endif %}</div>
+      <div class="query-answers-panel" id="panel-{{ q.id }}" style="display:none">
+        <div class="query-full-body">{{ q.body }}</div>
+        <div class="answers-loading" id="answers-{{ q.id }}"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+        <div class="query-footer-actions" onclick="event.stopPropagation()">
+          <a href="{{ url_for('main.view_query',qid=q.id) }}" class="btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> Full View</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% if not queries %}<div class="empty-state"><i class="fas fa-comments"></i><p>No queries yet.</p></div>{% endif %}
+  </div>
+</div>
+
+<!-- COURSES TAB -->
+<div class="tab-content" id="tab-courses">
+  <div class="courses-manage-header">
+    <p style="font-size:.83rem;color:var(--gray-500)"><i class="fas fa-info-circle" style="color:var(--vu-green)"></i> {{ courses|length }} course(s) in the system</p>
+    <button class="btn-primary btn-sm" onclick="openModal('modalAddCourse')"><i class="fas fa-plus"></i> Add Course</button>
+  </div>
+  <div class="table-wrapper">
+    <table class="vu-table" id="courseTable">
+      <thead><tr><th>#</th><th>Code</th><th>Title</th><th style="text-align:center">Actions</th></tr></thead>
+      <tbody>
+        {% for c in courses %}
+        <tr>
+          <td class="text-muted">{{ loop.index }}</td>
+          <td><strong class="course-code-cell">{{ c.code }}</strong></td>
+          <td>{{ c.title }}</td>
+          <td class="action-btns" style="justify-content:center">
+            <button class="btn-icon btn-edit" onclick="openEditCourseModal({{ c.id }},'{{ c.code }}','{{ c.title|replace("'","\\'") }}')"><i class="fas fa-pen"></i> Edit</button>
+            <form method="POST" action="{{ url_for('main.delete_course_route',cid=c.id) }}" style="display:inline" onsubmit="return confirm('Delete course {{ c.code }}?')">
+              <button type="submit" class="btn-icon btn-danger"><i class="fas fa-trash"></i> Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- MODAL: Add User -->
+<div class="modal-overlay" id="modalAddUser" onclick="closeModalOnBg(event,'modalAddUser')">
+  <div class="modal-box">
+    <div class="modal-header"><h2><i class="fas fa-user-plus"></i> Add New User</h2><button class="modal-close" onclick="closeModal('modalAddUser')"><i class="fas fa-times"></i></button></div>
+    <form method="POST" action="{{ url_for('main.add_user') }}">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Full Name<span class="required">*</span></label><input type="text" name="full_name" class="form-control" placeholder="e.g. Ali Hassan" required minlength="3"/></div>
+          <div class="form-group"><label class="form-label">Email<span class="required">*</span></label><input type="email" name="email" class="form-control" placeholder="user@vu.edu.pk" required/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Password<span class="required">*</span></label><input type="password" name="password" class="form-control" placeholder="Min 6 characters" required minlength="6"/></div>
+          <div class="form-group"><label class="form-label">Role<span class="required">*</span></label><select name="role" class="form-select" required><option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-book"></i> Course Enrollment</label>
+          <div class="course-check-grid">{% for c in courses %}<label class="course-check-item"><input type="checkbox" name="courses" value="{{ c.id }}"/><div class="ccheck-text"><span class="ccheck-code">{{ c.code }}</span><span class="ccheck-title">{{ c.title }}</span></div></label>{% endfor %}</div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn-secondary" onclick="closeModal('modalAddUser')">Cancel</button><button type="submit" class="btn-primary"><i class="fas fa-user-plus"></i> Create User</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: Edit User -->
+<div class="modal-overlay" id="modalEditUser" onclick="closeModalOnBg(event,'modalEditUser')">
+  <div class="modal-box">
+    <div class="modal-header"><h2><i class="fas fa-user-edit"></i> Edit User</h2><button class="modal-close" onclick="closeModal('modalEditUser')"><i class="fas fa-times"></i></button></div>
+    <form method="POST" id="editUserForm">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Full Name<span class="required">*</span></label><input type="text" name="full_name" id="edit_full_name" class="form-control" required minlength="3"/></div>
+          <div class="form-group"><label class="form-label">Email<span class="required">*</span></label><input type="email" name="email" id="edit_email" class="form-control" required/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Role<span class="required">*</span></label><select name="role" id="edit_role" class="form-select"><option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></div>
+          <div class="form-group"><label class="form-label">Status</label><select name="status" id="edit_status" class="form-select"><option value="active">Active</option><option value="blocked">Blocked</option></select></div>
+        </div>
+        <div class="form-group"><label class="form-label">New Password <small class="text-muted">(leave blank to keep current)</small></label><input type="password" name="new_password" id="edit_password" class="form-control" placeholder="Min 6 characters" minlength="6"/></div>
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-book"></i> Course Enrollments</label>
+          <div class="course-check-grid">{% for c in courses %}<label class="course-check-item"><input type="checkbox" name="courses" value="{{ c.id }}" class="edit-course-chk" data-cid="{{ c.id }}"/><div class="ccheck-text"><span class="ccheck-code">{{ c.code }}</span><span class="ccheck-title">{{ c.title }}</span></div></label>{% endfor %}</div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn-secondary" onclick="closeModal('modalEditUser')">Cancel</button><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Changes</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: Add Course -->
+<div class="modal-overlay" id="modalAddCourse" onclick="closeModalOnBg(event,'modalAddCourse')">
+  <div class="modal-box modal-sm">
+    <div class="modal-header"><h2><i class="fas fa-plus-circle"></i> Add New Course</h2><button class="modal-close" onclick="closeModal('modalAddCourse')"><i class="fas fa-times"></i></button></div>
+    <form method="POST" action="{{ url_for('main.add_course_route') }}">
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Course Code<span class="required">*</span></label><input type="text" name="code" class="form-control" placeholder="e.g. CS501" required maxlength="10" style="text-transform:uppercase"/><span class="form-hint">Short unique identifier — up to 10 characters</span></div>
+        <div class="form-group"><label class="form-label">Course Title<span class="required">*</span></label><input type="text" name="title" class="form-control" placeholder="e.g. Artificial Intelligence" required maxlength="120"/></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn-secondary" onclick="closeModal('modalAddCourse')">Cancel</button><button type="submit" class="btn-primary"><i class="fas fa-plus-circle"></i> Add Course</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: Edit Course -->
+<div class="modal-overlay" id="modalEditCourse" onclick="closeModalOnBg(event,'modalEditCourse')">
+  <div class="modal-box modal-sm">
+    <div class="modal-header"><h2><i class="fas fa-pen"></i> Edit Course</h2><button class="modal-close" onclick="closeModal('modalEditCourse')"><i class="fas fa-times"></i></button></div>
+    <form method="POST" id="editCourseForm">
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Course Code<span class="required">*</span></label><input type="text" name="code" id="editCourseCode" class="form-control" required maxlength="10" style="text-transform:uppercase"/></div>
+        <div class="form-group"><label class="form-label">Course Title<span class="required">*</span></label><input type="text" name="title" id="editCourseTitle" class="form-control" required maxlength="120"/></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn-secondary" onclick="closeModal('modalEditCourse')">Cancel</button><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Changes</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openModal(id){document.getElementById(id).classList.add('active');document.body.style.overflow='hidden'}
+function closeModal(id){document.getElementById(id).classList.remove('active');document.body.style.overflow=''}
+function closeModalOnBg(e,id){if(e.target===document.getElementById(id))closeModal(id)}
+function openEditModal(uid,name,email,role,status,courseIds){
+  document.getElementById('edit_full_name').value=name;
+  document.getElementById('edit_email').value=email;
+  document.getElementById('edit_role').value=role;
+  document.getElementById('edit_status').value=status;
+  document.getElementById('edit_password').value='';
+  document.getElementById('editUserForm').action='/admin/user/'+uid+'/edit';
+  document.querySelectorAll('.edit-course-chk').forEach(function(c){c.checked=courseIds.indexOf(parseInt(c.dataset.cid))!==-1});
+  openModal('modalEditUser');
+}
+function openEditCourseModal(cid,code,title){
+  document.getElementById('editCourseCode').value=code;
+  document.getElementById('editCourseTitle').value=title;
+  document.getElementById('editCourseForm').action='/admin/course/'+cid+'/edit';
+  openModal('modalEditCourse');
+}
+function filterByRole(role,btn){
+  document.querySelectorAll('.role-filter-btns .filter-pill').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  document.querySelectorAll('#userTable tbody tr').forEach(function(r){r.style.display=(role==='all'||r.dataset.role===role)?'':'none'});
+}
+function openAdminTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
+  document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active')});
+  var btn=document.querySelector('[data-tab="'+tab+'"]');
+  var content=document.getElementById('tab-'+tab);
+  if(btn)btn.classList.add('active');
+  if(content)content.classList.add('active');
+}
+if(window.location.hash==='#tab-courses')openAdminTab('courses');
+if(window.location.hash==='#tab-queries')openAdminTab('queries');
+if(window.location.hash==='#tab-users')openAdminTab('users');
+document.addEventListener('keydown',function(e){if(e.key==='Escape')['modalAddUser','modalEditUser','modalAddCourse','modalEditCourse'].forEach(closeModal)});
+</script>
+{% endblock %}

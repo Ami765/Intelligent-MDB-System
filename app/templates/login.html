@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Login — VULMS{% endblock %}
+{% block auth_content %}
+<div class="auth-page">
+  <div class="auth-topbar">
+    <img src="{{ url_for('static', filename='img/vu_logo.png') }}" alt="VU"/>
+    <div class="auth-topbar-text">
+      <strong>Virtual University of Pakistan</strong>
+      <small>Learning Management System (LMS)</small>
+    </div>
+  </div>
+
+  <div class="auth-body">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h1><i class="fas fa-lock" style="color:var(--vu-gold);margin-right:.4rem"></i>Student / Faculty Login</h1>
+        <p>Enter your credentials to access VULMS</p>
+      </div>
+      <div class="auth-card-body">
+        <form method="POST" action="{{ url_for('main.login') }}">
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-envelope" style="color:var(--vu-green)"></i> Email / VU ID</label>
+            <input type="email" name="email" class="form-control" placeholder="e.g. bc123456789@vu.edu.pk" required autofocus/>
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-lock" style="color:var(--vu-green)"></i> Password</label>
+            <div class="pw-wrap">
+              <input type="password" name="password" id="pw" class="form-control" placeholder="Enter your password" required/>
+              <button type="button" class="pw-toggle" onclick="document.getElementById('pw').type=document.getElementById('pw').type==='password'?'text':'password';this.querySelector('i').className=document.getElementById('pw').type==='password'?'fas fa-eye':'fas fa-eye-slash'">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary full-width" style="margin-top:.75rem">
+            <i class="fas fa-sign-in-alt"></i> Login to VULMS
+          </button>
+        </form>
+
+        <div class="demo-strip">
+          <div class="demo-strip-title"><i class="fas fa-info-circle"></i> Demo Accounts — Click to Fill</div>
+          <div class="demo-accounts-list">
+            <div class="demo-account" onclick="fillLogin('admin@vu.edu.pk','Admin@123')">
+              <span class="tb-role-badge role-admin">Admin</span>
+              <span class="demo-creds">admin@vu.edu.pk / Admin@123</span>
+            </div>
+            <div class="demo-account" onclick="fillLogin('instructor@vu.edu.pk','Inst@123')">
+              <span class="tb-role-badge role-instructor">Faculty</span>
+              <span class="demo-creds">instructor@vu.edu.pk / Inst@123</span>
+            </div>
+            <div class="demo-account" onclick="fillLogin('student@vu.edu.pk','Stud@123')">
+              <span class="tb-role-badge role-student">Student</span>
+              <span class="demo-creds">student@vu.edu.pk / Stud@123</span>
+            </div>
+          </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}" style="margin-top:.75rem">
+          <i class="fas fa-exclamation-circle"></i> {{ msg }}
+          <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {% endfor %}{% endif %}{% endwith %}
+      </div>
+      <div class="auth-card-footer">
+        New user? <a href="{{ url_for('main.register') }}">Register here</a>
+      </div>
+    </div>
+  </div>
+  <div class="auth-footer-bar">&copy; 2025 Virtual University of Pakistan — All Rights Reserved</div>
+</div>
+<script>
+function fillLogin(e, p) {
+  document.querySelector('[name=email]').value = e;
+  document.querySelector('[name=password]').value = p;
+}
+</script>
+{% endblock %}

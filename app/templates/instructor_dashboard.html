@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Instructor Dashboard — VULMS{% endblock %}
+{% block content_header %}
+<div class="content-header">
+  <div>
+    <div class="breadcrumb"><a href="#">Home</a><span class="sep">/</span><span class="current">Instructor Dashboard</span></div>
+    <div class="page-title">Instructor Dashboard</div>
+    <div class="page-subtitle">Welcome, {{ session.full_name }}</div>
+  </div>
+  <a href="{{ url_for('main.instructor_courses') }}" class="btn-secondary btn-sm"><i class="fas fa-book"></i> Manage Courses</a>
+</div>
+{% endblock %}
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-box green"><div class="stat-box-icon"><i class="fas fa-book"></i></div><div class="stat-num">{{ courses|length }}</div><div class="stat-label">My Courses</div></div>
+  <div class="stat-box gold"><div class="stat-box-icon"><i class="fas fa-inbox"></i></div><div class="stat-num">{{ queries|selectattr('status','equalto','open')|list|length }}</div><div class="stat-label">Pending</div></div>
+  <div class="stat-box teal"><div class="stat-box-icon"><i class="fas fa-check-double"></i></div><div class="stat-num">{{ queries|selectattr('status','equalto','answered')|list|length }}</div><div class="stat-label">Answered</div></div>
+  <div class="stat-box blue"><div class="stat-box-icon"><i class="fas fa-list"></i></div><div class="stat-num">{{ queries|length }}</div><div class="stat-label">Total</div></div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3><i class="fas fa-inbox"></i> Student Queries</h3>
+    <div class="filter-pills" style="margin-left:auto">
+      <span class="filter-pill active" data-filter="all">All</span>
+      <span class="filter-pill" data-filter="open"><i class="fas fa-clock"></i> Open</span>
+      <span class="filter-pill" data-filter="answered"><i class="fas fa-check"></i> Answered</span>
+      <span class="filter-pill" data-filter="closed"><i class="fas fa-lock"></i> Closed</span>
+    </div>
+  </div>
+  <div class="card-body" style="padding:.75rem">
+    {% if queries %}
+    <div class="query-list">
+      {% for q in queries %}
+      <div class="query-item" data-status="{{ q.status }}" onclick="toggleQuery({{ q.id }}, this)">
+        <div class="query-header-row">
+          <div class="query-meta">
+            <span class="query-course-tag">{{ q.code }}</span>
+            <span class="status-badge status-{{ q.status }}">
+              {% if q.status=='open' %}<i class="fas fa-clock"></i>{% elif q.status=='answered' %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-lock"></i>{% endif %}
+              {{ q.status|capitalize }}
+            </span>
+            <span class="student-name-badge"><i class="fas fa-user"></i> {{ q.student_name }}</span>
+          </div>
+          <div class="query-actions">
+            <span class="answer-count"><i class="fas fa-reply"></i> {{ q.answer_count }}</span>
+            <span class="query-time">{{ q.created_at[:10] }}</span>
+            <i class="fas fa-chevron-down toggle-icon"></i>
+          </div>
+        </div>
+        <div class="query-title">{{ q.title }}</div>
+        <div class="query-body-preview">{{ q.body[:120] }}{% if q.body|length > 120 %}...{% endif %}</div>
+
+        <div class="query-answers-panel" id="panel-{{ q.id }}" style="display:none">
+          <div class="query-full-body">{{ q.body }}</div>
+          <div class="answers-loading" id="answers-{{ q.id }}"><i class="fas fa-spinner fa-spin"></i> Loading answers...</div>
+
+          {% if q.status != 'closed' %}
+          <div class="inline-answer-form" onclick="event.stopPropagation()">
+            <h4><i class="fas fa-reply"></i> Post Answer</h4>
+            <form method="POST" action="{{ url_for('main.post_answer_route', qid=q.id) }}">
+              <textarea name="answer" placeholder="Write your answer here..." required rows="3"></textarea>
+              <div class="form-actions" style="margin-top:.5rem">
+                <button type="submit" class="btn-primary btn-sm"><i class="fas fa-paper-plane"></i> Submit Answer</button>
+              </div>
+            </form>
+            {% if q.status == 'answered' %}
+            <form method="POST" action="{{ url_for('main.close_query_route', qid=q.id) }}" style="margin-top:.5rem" onclick="event.stopPropagation()">
+              <button type="submit" class="btn-secondary btn-sm"><i class="fas fa-lock"></i> Mark as Closed</button>
+            </form>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="closed-notice" onclick="event.stopPropagation()"><i class="fas fa-lock"></i> This query is closed.</div>
+          {% endif %}
+
+          <div class="query-footer-actions" onclick="event.stopPropagation()">
+            <a href="{{ url_for('main.view_query', qid=q.id) }}" class="btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> Full View</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-inbox"></i>
+      <p>No student queries for your courses yet.</p>
+      <a href="{{ url_for('main.instructor_courses') }}" class="btn-secondary"><i class="fas fa-book"></i> Manage Courses</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

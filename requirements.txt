@@ -1,0 +1,5 @@
+Flask>=3.0.0
+Werkzeug>=3.0.0
+# For MySQL in production, uncomment:
+# mysql-connector-python>=8.3.0
+# Flask-MySQLdb>=2.0.0

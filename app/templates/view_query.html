@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}{{ query.title }} — VULMS{% endblock %}
+{% block content_header %}
+<div class="content-header">
+  <div>
+    <div class="breadcrumb">
+      <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+      <span class="sep">/</span><span class="current">Query Detail</span>
+    </div>
+    <div class="page-title">Query Detail</div>
+  </div>
+  <a href="javascript:history.back()" class="btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+{% endblock %}
+{% block content %}
+<div class="query-detail-wrapper">
+
+  <!-- Query Card -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-header">
+      <h3><i class="fas fa-question-circle"></i> Student Query</h3>
+      <div class="flex-gap">
+        <span class="status-badge status-{{ query.status }}">
+          {% if query.status=='open' %}<i class="fas fa-clock"></i>{% elif query.status=='answered' %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-lock"></i>{% endif %}
+          {{ query.status|capitalize }}
+        </span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="query-detail-meta">
+        <span style="background:var(--vu-green);color:#fff;font-size:.75rem;font-weight:700;padding:.2rem .6rem;border-radius:3px">{{ query.code }} — {{ query.course_title }}</span>
+        <span class="text-muted"><i class="fas fa-user"></i> {{ query.student_name }}</span>
+        <span class="text-muted"><i class="fas fa-calendar"></i> {{ query.created_at[:16] }}</span>
+      </div>
+      <div class="query-detail-title">{{ query.title }}</div>
+      <div class="query-detail-body">{{ query.body }}</div>
+    </div>
+  </div>
+
+  <!-- Answers -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-header"><h3><i class="fas fa-comments"></i> Answers ({{ answers|length }})</h3></div>
+    <div class="card-body">
+      {% if answers %}
+        {% for a in answers %}
+        <div class="answer-card">
+          <div class="answer-header">
+            <span class="answer-instructor"><i class="fas fa-chalkboard-teacher"></i> {{ a.instructor_name }}</span>
+            <span class="answer-time">{{ a.created_at[:16] }}</span>
+          </div>
+          <div class="answer-body">{{ a.body }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem">
+        <i class="fas fa-comment-slash"></i>
+        <p>No answers yet. An instructor will respond soon.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Post Answer (instructors/admin only) -->
+  {% if session.role in ('instructor','admin') and query.status != 'closed' %}
+  <div class="card">
+    <div class="card-header"><h3><i class="fas fa-reply"></i> Post Answer</h3></div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('main.post_answer_route', qid=query.id) }}">
+        <div class="form-group">
+          <label class="form-label">Your Answer<span class="required">*</span></label>
+          <textarea name="answer" class="form-control" rows="5" placeholder="Write a clear and detailed answer..." required style="resize:vertical"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary"><i class="fas fa-paper-plane"></i> Submit Answer</button>
+          {% if query.status == 'answered' %}
+          <form method="POST" action="{{ url_for('main.close_query_route', qid=query.id) }}" style="margin:0">
+            <button type="submit" class="btn-secondary"><i class="fas fa-lock"></i> Close Query</button>
+          </form>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>{% block title %}VULMS — Virtual University of Pakistan{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+
+{% if session.user_id %}
+<!-- ══ TOP BAR ══ -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <img src="{{ url_for('static', filename='img/vu_logo.png') }}" alt="Virtual University of Pakistan"/>
+  </div>
+  <button class="topbar-toggle" onclick="toggleSidebar()" title="Toggle Menu">
+    <i class="fas fa-bars"></i>
+  </button>
+  <div class="topbar-center">
+    <span class="topbar-title"><i class="fas fa-graduation-cap" style="color:var(--vu-gold);margin-right:.4rem"></i>Learning Management System</span>
+  </div>
+  <div class="topbar-right">
+    <div class="user-dropdown" onclick="toggleDropdown()" id="userDropdown">
+      <div class="user-avatar">{{ session.full_name[0]|upper }}</div>
+      <span style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ session.full_name }}</span>
+      <span class="tb-role-badge role-{{ session.role }}">{{ session.role|capitalize }}</span>
+      <i class="fas fa-chevron-down" style="font-size:.7rem;opacity:.6"></i>
+      <div class="dropdown-menu" id="dropdownMenu">
+        <div class="dropdown-header">
+          <div class="dh-name">{{ session.full_name }}</div>
+          <div class="dh-role">{{ session.email }} &bull; {{ session.role|capitalize }}</div>
+        </div>
+        <a href="{{ url_for('main.dashboard') }}" class="dropdown-item"><i class="fas fa-home"></i> Dashboard</a>
+        <hr class="dropdown-divider"/>
+        <a href="{{ url_for('main.logout') }}" class="dropdown-item danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <span class="sidebar-section-label">Navigation</span>
+    <a href="{{ url_for('main.dashboard') }}" class="sidebar-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+      <i class="fas fa-th-large"></i> Dashboard
+    </a>
+  </div>
+
+  {% if session.role == 'student' %}
+  <div class="sidebar-section">
+    <span class="sidebar-section-label">My Learning</span>
+    <a href="{{ url_for('main.student_dashboard') }}" class="sidebar-link {% if request.endpoint == 'main.student_dashboard' %}active{% endif %}">
+      <i class="fas fa-tachometer-alt"></i> My Dashboard
+    </a>
+    <a href="{{ url_for('main.student_courses') }}" class="sidebar-link {% if request.endpoint == 'main.student_courses' %}active{% endif %}">
+      <i class="fas fa-book-open"></i> My Courses
+    </a>
+    <a href="{{ url_for('main.new_query') }}" class="sidebar-link {% if request.endpoint == 'main.new_query' %}active{% endif %}">
+      <i class="fas fa-question-circle"></i> Submit Query
+    </a>
+  </div>
+
+  {% elif session.role == 'instructor' %}
+  <div class="sidebar-section">
+    <span class="sidebar-section-label">Teaching</span>
+    <a href="{{ url_for('main.instructor_dashboard') }}" class="sidebar-link {% if request.endpoint == 'main.instructor_dashboard' %}active{% endif %}">
+      <i class="fas fa-tachometer-alt"></i> My Dashboard
+    </a>
+    <a href="{{ url_for('main.instructor_courses') }}" class="sidebar-link {% if request.endpoint == 'main.instructor_courses' %}active{% endif %}">
+      <i class="fas fa-book-open"></i> My Courses
+    </a>
+  </div>
+
+  {% elif session.role == 'admin' %}
+  <div class="sidebar-section">
+    <span class="sidebar-section-label">Administration</span>
+    <a href="{{ url_for('main.admin_dashboard') }}" class="sidebar-link {% if request.endpoint in ('main.admin_dashboard',) %}active{% endif %}">
+      <i class="fas fa-tachometer-alt"></i> Overview
+    </a>
+    <a href="{{ url_for('main.admin_dashboard') }}#tab-users" class="sidebar-link" onclick="openAdminTab('users')">
+      <i class="fas fa-users"></i> Manage Users
+    </a>
+    <a href="{{ url_for('main.admin_dashboard') }}#tab-courses" class="sidebar-link" onclick="openAdminTab('courses')">
+      <i class="fas fa-book"></i> Manage Courses
+    </a>
+    <a href="{{ url_for('main.admin_dashboard') }}#tab-queries" class="sidebar-link" onclick="openAdminTab('queries')">
+      <i class="fas fa-comments"></i> All Queries
+    </a>
+  </div>
+  {% endif %}
+
+  <div class="sidebar-section">
+    <span class="sidebar-section-label">Account</span>
+    <a href="{{ url_for('main.logout') }}" class="sidebar-link">
+      <i class="fas fa-sign-out-alt"></i> Logout
+    </a>
+  </div>
+
+  <div style="padding:1rem 1.1rem;margin-top:auto">
+    <div style="font-size:.7rem;color:rgba(255,255,255,.25);line-height:1.5">
+      Virtual University of Pakistan<br/>
+      Learning Management System<br/>
+      &copy; {{ 2025 }} VU. All rights reserved.
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div class="main-content" id="mainContent">
+  {% block content_header %}{% endblock %}
+
+  <div class="content-body">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="alerts">
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">
+          <i class="fas fa-{% if cat=='success' %}check-circle{% elif cat=='danger' %}exclamation-circle{% elif cat=='warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+          <span>{{ msg }}</span>
+          <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+      {% endfor %}
+      </div>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer class="lms-footer">
+    &copy; {{ 2025 }} <a href="#">Virtual University of Pakistan</a> — All Rights Reserved &nbsp;|&nbsp;
+    Powered by <strong style="color:rgba(255,255,255,.6)">VU LMS</strong>
+  </footer>
+</div>
+
+{% else %}
+<!-- Auth pages have their own layout -->
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

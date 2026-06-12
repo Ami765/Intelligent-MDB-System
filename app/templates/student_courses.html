@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}My Courses — VULMS{% endblock %}
+{% block content_header %}
+<div class="content-header">
+  <div>
+    <div class="breadcrumb"><a href="{{ url_for('main.student_dashboard') }}">Dashboard</a><span class="sep">/</span><span class="current">Course Enrollment</span></div>
+    <div class="page-title">Course Enrollment</div>
+    <div class="page-subtitle">Select the courses you are registered in</div>
+  </div>
+  <a href="{{ url_for('main.student_dashboard') }}" class="btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card form-card">
+  <div class="card-header"><h3><i class="fas fa-book-open"></i> Course Registration</h3></div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('main.student_courses') }}">
+      <p style="font-size:.83rem;color:var(--gray-600);margin-bottom:.9rem">
+        <i class="fas fa-info-circle" style="color:var(--vu-green)"></i>
+        Select all courses you are currently enrolled in. You can only submit queries for selected courses.
+      </p>
+      <div class="course-check-grid" style="max-height:none">
+        {% for c in all_courses %}
+        <label class="course-check-item">
+          <input type="checkbox" name="courses" value="{{ c.id }}" {% if c.id in my_course_ids %}checked{% endif %}/>
+          <div class="ccheck-text">
+            <span class="ccheck-code">{{ c.code }}</span>
+            <span class="ccheck-title">{{ c.title }}</span>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="form-actions" style="margin-top:1rem">
+        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Enrollment</button>
+        <a href="{{ url_for('main.student_dashboard') }}" class="btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

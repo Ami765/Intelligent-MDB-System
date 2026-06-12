@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — VULMS{% endblock %}
+
+{% block content_header %}
+<div class="content-header">
+  <div>
+    <div class="breadcrumb"><a href="#">Home</a><span class="sep">/</span><span class="current">My Dashboard</span></div>
+    <div class="page-title">Student Dashboard</div>
+    <div class="page-subtitle">Welcome back, {{ session.full_name }}</div>
+  </div>
+  <a href="{{ url_for('main.new_query') }}" class="btn-primary btn-sm">
+    <i class="fas fa-plus"></i> Submit New Query
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-box green">
+    <div class="stat-box-icon"><i class="fas fa-book-open"></i></div>
+    <div class="stat-num">{{ courses|length }}</div>
+    <div class="stat-label">Enrolled Courses</div>
+  </div>
+  <div class="stat-box blue">
+    <div class="stat-box-icon"><i class="fas fa-question-circle"></i></div>
+    <div class="stat-num">{{ queries|length }}</div>
+    <div class="stat-label">Total Queries</div>
+  </div>
+  <div class="stat-box gold">
+    <div class="stat-box-icon"><i class="fas fa-clock"></i></div>
+    <div class="stat-num">{{ queries|selectattr('status','equalto','open')|list|length }}</div>
+    <div class="stat-label">Pending</div>
+  </div>
+  <div class="stat-box teal">
+    <div class="stat-box-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-num">{{ queries|selectattr('status','equalto','answered')|list|length }}</div>
+    <div class="stat-label">Answered</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:1rem">
+
+<!-- My Courses -->
+<div>
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-book-open"></i> My Courses</h3>
+      <a href="{{ url_for('main.student_courses') }}" class="btn-sm btn-outline" style="color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.3);font-size:.75rem;padding:.2rem .6rem">Manage</a>
+    </div>
+    <div class="card-body" style="padding:.75rem">
+      {% if courses %}
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        {% for c in courses %}
+        <div style="display:flex;align-items:center;gap:.7rem;padding:.6rem .75rem;background:var(--vu-green-xpale);border-radius:var(--radius);border:1px solid #c8ddc8">
+          <div style="background:var(--vu-green);color:#fff;font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:3px;flex-shrink:0">{{ c.code }}</div>
+          <div style="font-size:.83rem;color:var(--gray-700);font-weight:600">{{ c.title }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem">
+        <i class="fas fa-book"></i>
+        <p>No courses enrolled.<br/><a href="{{ url_for('main.student_courses') }}">Add courses</a></p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- My Queries -->
+<div>
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-comments"></i> My Queries</h3>
+      <div class="filter-pills" style="margin-left:auto">
+        <span class="filter-pill active" data-filter="all">All</span>
+        <span class="filter-pill" data-filter="open">Open</span>
+        <span class="filter-pill" data-filter="answered">Answered</span>
+      </div>
+    </div>
+    <div class="card-body" style="padding:.75rem">
+      {% if queries %}
+      <div class="query-list">
+        {% for q in queries %}
+        <div class="query-item" data-status="{{ q.status }}" onclick="toggleQuery({{ q.id }}, this)">
+          <div class="query-header-row">
+            <div class="query-meta">
+              <span class="query-course-tag">{{ q.code }}</span>
+              <span class="status-badge status-{{ q.status }}">
+                {% if q.status=='open' %}<i class="fas fa-clock"></i>{% elif q.status=='answered' %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-lock"></i>{% endif %}
+                {{ q.status|capitalize }}
+              </span>
+            </div>
+            <div class="query-actions">
+              <span class="answer-count"><i class="fas fa-reply"></i> {{ q.answer_count }}</span>
+              <span class="query-time">{{ q.created_at[:10] }}</span>
+              <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+          </div>
+          <div class="query-title">{{ q.title }}</div>
+          <div class="query-body-preview">{{ q.body[:100] }}{% if q.body|length > 100 %}...{% endif %}</div>
+          <div class="query-answers-panel" id="panel-{{ q.id }}" style="display:none">
+            <div class="query-full-body">{{ q.body }}</div>
+            <div class="answers-loading" id="answers-{{ q.id }}"><i class="fas fa-spinner fa-spin"></i> Loading answers...</div>
+            <div class="query-footer-actions" onclick="event.stopPropagation()">
+              <a href="{{ url_for('main.view_query', qid=q.id) }}" class="btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> Full View</a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem">
+        <i class="fas fa-question-circle"></i>
+        <p>No queries yet.<br/><a href="{{ url_for('main.new_query') }}">Submit your first query</a></p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+</div>
+{% endblock %}
